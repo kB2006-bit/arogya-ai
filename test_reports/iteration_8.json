@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend-only regression for Vite cleanup passed for core rendering and navbar navigation on public URL. Vite entry/build structure is active (index.html -> /src/main.jsx, Vercel dist target present), but one CRA-era env variable remains.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/frontend/package.json",
+    "/app/frontend/vite.config.mjs",
+    "/app/frontend/index.html",
+    "/app/frontend/src/main.jsx",
+    "/app/frontend/vercel.json"
+  ],
+  "action_items": [
+    "Remove WDS_SOCKET_PORT from /app/frontend/.env to fully complete CRA/CRACO remnant cleanup.",
+    "Re-run a quick frontend smoke test after .env cleanup to confirm no runtime regression."
+  ],
+  "critical_code_review_comments": [
+    "Vite-only structure is correctly wired: no craco config found, no src/index.js entry, and no frontend/public/index.html.",
+    "Build/deploy alignment looks correct for Vercel static build with dist output.",
+    "CRA remnant detected: /app/frontend/.env still contains WDS_SOCKET_PORT=443.",
+    "/api/clinics remains MOCKED in this environment (unchanged from prior iterations)."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_8.json"
+  ],
+  "success_rate": {
+    "backend": "N/A (frontend-only scope)",
+    "frontend": "90%"
+  },
+  "seed_data_creation": "No seed data created.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "UI smoke passed on public URL: landing renders, navbar visible, /login navigation works, and no page-level error selectors detected. One cleanup gap remains in frontend/.env (WDS_SOCKET_PORT).",
+  "rca of the issue": "Root cause: incomplete CRA cleanup left an old webpack dev-server env key (WDS_SOCKET_PORT) in frontend/.env. Repro: run `rg -n --hidden \"WDS_SOCKET_PORT\" /app/frontend` and observe match in .env. Mitigation: remove the key and retest landing/login route load."
+}

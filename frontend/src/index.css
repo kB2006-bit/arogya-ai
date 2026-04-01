@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    margin: 0;
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+    font-family:
+        source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+@layer base {
+    :root {
+        --background: 40 50% 98%;
+        --foreground: 106 13% 18%;
+        --card: 0 0% 100%;
+        --card-foreground: 106 13% 18%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 106 13% 18%;
+        --primary: 103 23% 33%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 101 24% 92%;
+        --secondary-foreground: 106 13% 18%;
+        --muted: 100 24% 95%;
+        --muted-foreground: 102 11% 38%;
+        --accent: 42 38% 89%;
+        --accent-foreground: 106 13% 18%;
+        --destructive: 0 73% 52%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 103 15% 88%;
+        --input: 103 15% 88%;
+        --ring: 102 11% 60%;
+        --chart-1: 103 23% 33%;
+        --chart-2: 14 49% 58%;
+        --chart-3: 42 38% 72%;
+        --chart-4: 35 85% 48%;
+        --chart-5: 0 73% 52%;
+        --radius: 1rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+        min-height: 100vh;
+        font-family: 'Manrope', sans-serif;
+        line-height: 1.5;
+        background-image: radial-gradient(circle at 0% 0%, rgba(216, 226, 211, 0.75), transparent 28%), radial-gradient(circle at 100% 0%, rgba(221, 207, 180, 0.55), transparent 24%);
+    }
+
+    *::selection {
+        background: rgba(74, 103, 65, 0.2);
+    }
+}
+
+@layer utilities {
+    .font-heading {
+        font-family: 'Outfit', sans-serif;
+    }
+}
+
+@layer base {
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+
+    [data-debug-wrapper="true"] > * {
+        margin-left: inherit;
+        margin-right: inherit;
+        margin-top: inherit;
+        margin-bottom: inherit;
+        padding-left: inherit;
+        padding-right: inherit;
+        padding-top: inherit;
+        padding-bottom: inherit;
+        column-gap: inherit;
+        row-gap: inherit;
+        gap: inherit;
+        border-left-width: inherit;
+        border-right-width: inherit;
+        border-top-width: inherit;
+        border-bottom-width: inherit;
+        border-left-style: inherit;
+        border-right-style: inherit;
+        border-top-style: inherit;
+        border-bottom-style: inherit;
+        border-left-color: inherit;
+        border-right-color: inherit;
+        border-top-color: inherit;
+        border-bottom-color: inherit;
+    }
+}

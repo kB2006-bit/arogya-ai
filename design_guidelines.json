@@ -1,0 +1,135 @@
+{
+  "project_name": "ArogyaAI",
+  "domain": "Health/Medical AI Symptom Checker",
+  "theme": "Light",
+  "archetype": "1 (Organic & Earthy)",
+  "emotional_tone": "Calm, trustworthy, safe, and approachable. Escaping the cold, clinical tech-bro aesthetic.",
+  "design_philosophy": [
+    "Fusion over Imitation: Combine modern messaging app patterns (WhatsApp) with organic botanical color warmth.",
+    "Emotion First: The UI must lower patient anxiety. Soft rounded edges, warm tones, and readable typography.",
+    "Content is King: The AI chat is the hero. Keep distractions minimal.",
+    "Negative Space: Generous padding around chat bubbles and dashboard cards to provide breathing room.",
+    "Contrast: Use deep forest greens for critical actions against warm bone-white backgrounds."
+  ],
+  "colors": {
+    "background": {
+      "default": "#FDFBF7",
+      "surface": "#FFFFFF",
+      "chat_ai": "#F2F4F0",
+      "chat_user": "#4A6741",
+      "sos_bg": "#FEF2F2"
+    },
+    "text": {
+      "primary": "#2A3326",
+      "secondary": "#5C6B56",
+      "tertiary": "#8E9B86",
+      "inverse": "#FFFFFF",
+      "sos": "#991B1B"
+    },
+    "border": {
+      "default": "#E2E8DF",
+      "focus": "#8E9B86",
+      "sos": "#FECACA"
+    },
+    "primary": {
+      "main": "#4A6741",
+      "hover": "#3C5435",
+      "light": "#D8E2D3"
+    },
+    "accent": {
+      "sage": "#8E9B86",
+      "terracotta": "#C86B5E",
+      "sand": "#DDCFB4"
+    },
+    "semantic": {
+      "severity_low": "#4A6741",
+      "severity_medium": "#D97706",
+      "severity_high": "#DC2626"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "'Outfit', sans-serif",
+      "body": "'Manrope', sans-serif"
+    },
+    "scales": {
+      "h1": "text-4xl sm:text-5xl tracking-tight font-semibold",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-medium",
+      "h3": "text-xl sm:text-2xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-secondary",
+      "overline": "text-xs tracking-[0.2em] uppercase font-bold text-sage"
+    },
+    "rules": [
+      "No Inter or generic sans for headings.",
+      "Headings must use tight letter spacing.",
+      "Body text must use relaxed line height."
+    ]
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing Philosophy. Use 2-3x more spacing than typical clinical apps.",
+    "containers": "Max-width of 3xl (48rem) for the chat interface to maintain readability.",
+    "padding": "Use p-6 or p-8 for dashboard cards.",
+    "grid": "Control Room Grid for the dashboard: grid-cols-1 md:grid-cols-3 with gap-6. Flat rectangles, no heavy box shadows.",
+    "chat_layout": "WhatsApp-style but elevated. AI bubbles left, User bubbles right. Max bubble width 80%."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-white rounded-full px-6 py-3 font-medium hover:bg-primary-hover transition-colors",
+      "secondary": "bg-transparent border border-border text-primary rounded-full px-6 py-3 hover:bg-chat_ai transition-colors",
+      "sos": "bg-red-600 text-white rounded-full px-6 py-3 font-bold shadow-[0_0_15px_rgba(220,38,38,0.5)] animate-pulse hover:bg-red-700"
+    },
+    "cards": {
+      "style": "bg-white border border-border rounded-2xl p-6",
+      "hover": "hover:-translate-y-1 hover:shadow-lg transition-all duration-300",
+      "note": "Avoid default Shadcn Card shadow. Use 1px subtle border."
+    },
+    "inputs": {
+      "style": "bg-white border border-border rounded-full px-6 py-3 focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent transition-all",
+      "chat_input": "flex-1 bg-chat_ai border-none rounded-full px-6 py-4 focus:ring-2 focus:ring-sage"
+    },
+    "surfaces": {
+      "header": "backdrop-blur-xl bg-background/80 border-b border-border sticky top-0 z-50",
+      "chat_bubble_ai": "bg-chat_ai text-primary rounded-2xl rounded-tl-sm p-4",
+      "chat_bubble_user": "bg-primary text-white rounded-2xl rounded-tr-sm p-4"
+    }
+  },
+  "motion": {
+    "hover": "Subtle -translate-y-[2px] on interactive dashboard cards.",
+    "chat_message": "Animate new messages entering from bottom with slight fade-in (Framer Motion).",
+    "sos_alert": "Pulsing red glow for High Severity warnings."
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Stroke width 1.5, rounded caps. Use primary or secondary colors."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "category": "hero_background",
+        "url": "https://images.unsplash.com/photo-1763734313272-f06e0d4c1239?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMHNhZ2UlMjBncmVlbiUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc1MDA2NDYz&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract patterned texture with organic shapes for landing page background."
+      },
+      {
+        "category": "doctor_portrait",
+        "url": "https://images.pexels.com/photos/19438563/pexels-photo-19438563.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Confident South Asian male doctor in white coat with stethoscope, for trust building in about/landing section."
+      }
+    ]
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets minimum 4.5:1 ratio against backgrounds.",
+    "focus": "focus:ring-2 focus:ring-sage on all interactive elements.",
+    "test_ids": "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., data-testid='chat-submit-button')."
+  },
+  "instructions_to_main_agent": [
+    "Install Outfit and Manrope fonts from Google Fonts via CSS import.",
+    "Set up Tailwind config with the custom color palette provided above.",
+    "Implement the Chat UI using a WhatsApp-style message layout but with the provided curved bubble radius.",
+    "Use Lucide icons for UI actions (send, menu, map, SOS).",
+    "For the Maps integration, overlay it cleanly within a border-border rounded-2xl container without heavy shadows.",
+    "Ensure the SOS button pulses and is highly visible when the AI returns 'High' severity.",
+    "Apply backdrop-blur-xl to the sticky top navigation header.",
+    "Do not use generic blue/teal colors. Stick strictly to the Organic & Earthy palette."
+  ]
+}
