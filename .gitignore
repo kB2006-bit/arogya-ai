@@ -89,3 +89,7 @@ arogyaai.zip
 # Environment files - commented out for deployment
 # *.env
 # *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
