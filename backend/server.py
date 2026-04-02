@@ -171,14 +171,21 @@ async def startup_event():
         await client.admin.command('ping')
         logger.info("✅ MongoDB connection successful")
         
-        # Ensure demo user exists
+        # Ensure demo user exists with correct password
         demo_user = await get_user_by_email(DEMO_USER_EMAIL)
-        if not demo_user:
+        if demo_user:
+            logger.info(f"Demo user exists, updating password to ensure it's correct: {DEMO_USER_EMAIL}")
+            # Update the password to ensure it's correct
+            new_hash = get_password_hash(DEMO_USER_PASSWORD)
+            await users_collection.update_one(
+                {"email": DEMO_USER_EMAIL},
+                {"$set": {"password_hash": new_hash}}
+            )
+            logger.info(f"✅ Demo user password updated: {DEMO_USER_EMAIL}")
+        else:
             logger.info(f"Creating demo user: {DEMO_USER_EMAIL}")
             await create_user(DEMO_USER_EMAIL, DEMO_USER_PASSWORD, "en")
             logger.info("✅ Demo user created successfully")
-        else:
-            logger.info(f"✅ Demo user already exists: {DEMO_USER_EMAIL}")
             
     except Exception as e:
         logger.error(f"❌ Startup error: {str(e)}", exc_info=True)
@@ -190,6 +197,25 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {"message": "ArogyaAI API Running 🚀", "version": "2.0"}
+
+
+@app.get("/api/health")
+async def health_check():
+    try:
+        # Test MongoDB connection
+        await client.admin.command('ping')
+        return {
+            "status": "healthy",
+            "mongodb": "connected",
+            "version": "2.0"
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "mongodb": "disconnected",
+            "error": str(e)
+        }
 
 
 # -------------------------
@@ -242,9 +268,14 @@ async def signup(user_data: UserCreate, response: Response):
 
 @app.post("/api/auth/login", response_model=AuthResponse)
 async def login(credentials: UserLogin, response: Response):
+    logger.info(f"=== LOGIN REQUEST START === Email: {credentials.email}")
     try:
-        logger.info(f"Login request received for email: {credentials.email}")
+        # Validate input
+        if not credentials.email or not credentials.password:
+            logger.error("Login failed: Missing email or password")
+            raise HTTPException(status_code=400, detail="Email and password are required")
         
+        logger.info(f"Checking login lockout for: {credentials.email}")
         # Check if user is locked out
         if await check_login_lockout(credentials.email):
             logger.warning(f"Login failed: User locked out - {credentials.email}")
@@ -254,23 +285,40 @@ async def login(credentials: UserLogin, response: Response):
             )
         
         # Find user
+        logger.info(f"Finding user in database: {credentials.email}")
         user = await get_user_by_email(credentials.email)
         if not user:
             logger.warning(f"Login failed: User not found - {credentials.email}")
             await record_failed_login(credentials.email)
             raise HTTPException(status_code=401, detail="Invalid email or password")
         
+        logger.info(f"User found: {credentials.email}, verifying password")
         # Verify password
-        if not verify_password(credentials.password, user["password_hash"]):
+        try:
+            password_valid = verify_password(credentials.password, user["password_hash"])
+            logger.info(f"Password verification result: {password_valid}")
+        except Exception as pwd_error:
+            logger.error(f"Password verification error: {str(pwd_error)}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Authentication system error")
+        
+        if not password_valid:
             logger.warning(f"Login failed: Invalid password - {credentials.email}")
             await record_failed_login(credentials.email)
             raise HTTPException(status_code=401, detail="Invalid email or password")
         
         # Reset login attempts on successful login
+        logger.info(f"Password verified, resetting login attempts: {credentials.email}")
         await reset_login_attempts(credentials.email)
         
         # Create access token
-        access_token = create_access_token({"sub": user["id"]})
+        logger.info(f"Creating access token for: {credentials.email}")
+        try:
+            access_token = create_access_token({"sub": user["id"]})
+            logger.info(f"Access token created successfully")
+        except Exception as token_error:
+            logger.error(f"Token creation error: {str(token_error)}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to create authentication token")
+        
         logger.info(f"Login successful: {credentials.email}")
         
         # Set httpOnly cookie
@@ -283,6 +331,7 @@ async def login(credentials: UserLogin, response: Response):
             max_age=604800  # 7 days
         )
         
+        logger.info(f"=== LOGIN REQUEST SUCCESS === Email: {credentials.email}")
         return AuthResponse(
             token=access_token,
             user=UserPublic(
@@ -292,10 +341,11 @@ async def login(credentials: UserLogin, response: Response):
                 created_at=user["created_at"]
             )
         )
-    except HTTPException:
+    except HTTPException as http_exc:
+        logger.warning(f"=== LOGIN REQUEST FAILED === Email: {credentials.email}, Status: {http_exc.status_code}, Detail: {http_exc.detail}")
         raise
     except Exception as e:
-        logger.error(f"Login error for {credentials.email}: {str(e)}", exc_info=True)
+        logger.error(f"=== LOGIN REQUEST ERROR === Email: {credentials.email}, Error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
 
