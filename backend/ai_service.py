@@ -18,12 +18,26 @@ except ImportError:
 
 # Enhanced severity classification keywords
 HIGH_SEVERITY_KEYWORDS = [
-    "chest pain", "heart attack", "stroke", "can't breathe", "cannot breathe",
-    "breathing difficulty", "shortness of breath", "unconscious", "passed out",
-    "seizure", "bleeding heavily", "severe bleeding", "blood in stool", "blood in urine",
-    "coughing blood", "vomiting blood", "severe head injury", "head trauma",
-    "loss of vision", "sudden blindness", "paralysis", "can't move", "cannot move",
-    "severe abdominal pain", "suicide", "suicidal", "overdose"
+    # Cardiac emergencies
+    "chest pain", "heart attack", "stroke", "cardiac arrest",
+    # Respiratory emergencies
+    "can't breathe", "cannot breathe", "breathing difficulty", "shortness of breath",
+    "choking", "asphyxiation",
+    # Neurological emergencies
+    "unconscious", "passed out", "seizure", "convulsion", "paralysis", 
+    "can't move", "cannot move", "loss of vision", "sudden blindness",
+    # Hemorrhagic emergencies
+    "bleeding heavily", "severe bleeding", "blood in stool", "blood in urine",
+    "coughing blood", "vomiting blood", "hemorrhage", "massive bleeding",
+    # Abdominal emergencies
+    "severe abdominal pain", "severe stomach pain", "acute abdomen",
+    # Trauma
+    "severe head injury", "head trauma", "skull fracture",
+    # Mental health emergencies
+    "suicide", "suicidal", "kill myself", "overdose", "poisoning",
+    # Cancer/serious disease mentions (already diagnosed or suspected)
+    "stage 4", "stage iv", "metastatic", "terminal", "end stage",
+    "cancer spread", "malignant tumor",
 ]
 
 MEDIUM_SEVERITY_KEYWORDS = [
@@ -36,10 +50,15 @@ MEDIUM_SEVERITY_KEYWORDS = [
 ]
 
 SERIOUS_SYMPTOMS_INDICATORS = [
-    "lump", "mass", "growth", "tumor", "unexplained weight loss",
+    # Cancer-related concerns
+    "lump", "mass", "growth", "tumor", "cancerous", "malignancy",
+    # Systemic concerns
+    "unexplained weight loss", "unintentional weight loss", "rapid weight loss",
     "night sweats", "persistent cough", "coughing for weeks",
     "difficulty swallowing", "blood", "bleeding", "bruising easily",
-    "chronic pain", "pain for weeks", "yellow skin", "jaundice"
+    "chronic pain", "pain for weeks", "yellow skin", "jaundice",
+    # Serious diagnoses mentioned
+    "cancer", "diagnosed with cancer", "biopsy", "chemotherapy", "radiation"
 ]
 
 
@@ -348,7 +367,7 @@ def _get_severity_emergency_message(severity: str) -> str:
 
 def _enhanced_severity_classification(message: str) -> tuple[str, str]:
     """
-    Enhanced rule-based severity classification
+    Enhanced rule-based severity classification with pattern detection
     Returns: (severity_level, recommended_action)
     """
     lowered = message.lower()
@@ -363,6 +382,10 @@ def _enhanced_severity_classification(message: str) -> tuple[str, str]:
         if indicator in lowered:
             return ("High", "Consult a doctor as soon as possible for proper diagnosis")
     
+    # Pattern detection for concerning combinations
+    if _detect_concerning_patterns(lowered):
+        return ("High", "Seek medical evaluation as soon as possible")
+    
     # Check for medium severity
     for keyword in MEDIUM_SEVERITY_KEYWORDS:
         if keyword in lowered:
@@ -370,6 +393,38 @@ def _enhanced_severity_classification(message: str) -> tuple[str, str]:
     
     # Default to low if no specific indicators found
     return ("Low", "Monitor symptoms and consult a doctor if they persist or worsen")
+
+
+def _detect_concerning_patterns(message: str) -> bool:
+    """
+    Detect concerning symptom patterns that may indicate serious conditions
+    """
+    # Appendicitis indicators
+    if ("pain" in message and "abdomen" in message) or ("pain" in message and "stomach" in message):
+        if any(word in message for word in ["sharp", "severe", "acute", "hours", "worsening"]):
+            if "right" in message or "lower" in message:
+                return True
+    
+    # Duration-based severity (persistent symptoms)
+    if any(duration in message for duration in ["weeks", "months", "persistent", "chronic", "continuous"]):
+        if any(symptom in message for symptom in ["pain", "bleeding", "cough", "fever"]):
+            return True
+    
+    # Multiple concerning symptoms together
+    concerning_combos = [
+        ("weight loss", "fever"),
+        ("weight loss", "night sweats"),
+        ("fatigue", "weight loss"),
+        ("blood", "stool"),
+        ("blood", "urine"),
+        ("difficulty", "swallowing"),
+    ]
+    
+    for combo in concerning_combos:
+        if all(symptom in message for symptom in combo):
+            return True
+    
+    return False
 
 
 def _simple_brief_fallback(message: str) -> Dict[str, str]:
