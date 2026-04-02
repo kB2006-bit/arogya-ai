@@ -8,6 +8,7 @@ export const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // 30 second timeout
 });
 
 export const loginApi = axios.create({
@@ -15,7 +16,23 @@ export const loginApi = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // 30 second timeout
 });
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timeout');
+      error.message = 'Request timeout. Please try again.';
+    } else if (!error.response) {
+      console.error('Network error');
+      error.message = 'Network error. Please check your connection.';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const withAuth = (token) => ({
   headers: {

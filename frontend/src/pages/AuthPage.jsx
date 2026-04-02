@@ -22,6 +22,7 @@ export default function AuthPage({ mode = "login" }) {
     event.preventDefault();
     setError("");
     setLoading(true);
+    
     try {
       if (mode === "login") {
         await login(form);
@@ -31,7 +32,29 @@ export default function AuthPage({ mode = "login" }) {
       navigate(from, { replace: true });
     } catch (requestError) {
       console.error("Auth error:", requestError);
-      setError(requestError.response?.data?.detail || requestError.message || "Unable to continue right now.");
+      
+      // Handle different error types
+      let errorMessage = "Unable to continue right now.";
+      
+      if (requestError.response) {
+        // Server responded with error
+        if (requestError.response.data?.detail) {
+          if (typeof requestError.response.data.detail === 'string') {
+            errorMessage = requestError.response.data.detail;
+          } else if (Array.isArray(requestError.response.data.detail)) {
+            // Pydantic validation errors
+            errorMessage = requestError.response.data.detail.map(err => err.msg).join(', ');
+          }
+        }
+      } else if (requestError.request) {
+        // Request made but no response
+        errorMessage = "Server is not responding. Please try again.";
+      } else if (requestError.message) {
+        // Error in request setup
+        errorMessage = requestError.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

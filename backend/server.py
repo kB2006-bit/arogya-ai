@@ -7,6 +7,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import Cookie, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from ai_service import generate_brief_symptom_analysis, generate_symptom_assessment
@@ -34,6 +35,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="ArogyaAI", version="2.0")
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"}
+    )
 
 # CORS Configuration
 CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
@@ -171,22 +181,32 @@ async def startup_event():
         await client.admin.command('ping')
         logger.info("✅ MongoDB connection successful")
         
-        # Ensure demo user exists with correct password
-        demo_user = await get_user_by_email(DEMO_USER_EMAIL)
-        if demo_user:
-            logger.info(f"Demo user exists, updating password to ensure it's correct: {DEMO_USER_EMAIL}")
-            # Update the password to ensure it's correct
-            new_hash = get_password_hash(DEMO_USER_PASSWORD)
-            await users_collection.update_one(
-                {"email": DEMO_USER_EMAIL},
-                {"$set": {"password_hash": new_hash}}
-            )
-            logger.info(f"✅ Demo user password updated: {DEMO_USER_EMAIL}")
-        else:
-            logger.info(f"Creating demo user: {DEMO_USER_EMAIL}")
-            await create_user(DEMO_USER_EMAIL, DEMO_USER_PASSWORD, "en")
-            logger.info("✅ Demo user created successfully")
-            
+        # Delete existing demo user and recreate fresh
+        logger.info(f"Ensuring fresh demo user: {DEMO_USER_EMAIL}")
+        await users_collection.delete_one({"email": DEMO_USER_EMAIL})
+        
+        # Create fresh demo user
+        user_id = str(uuid.uuid4())
+        hashed_password = get_password_hash(DEMO_USER_PASSWORD)
+        now = datetime.now(timezone.utc).isoformat()
+        
+        demo_user_doc = {
+            "id": user_id,
+            "email": DEMO_USER_EMAIL,
+            "password_hash": hashed_password,
+            "language": "en",
+            "created_at": now,
+        }
+        
+        await users_collection.insert_one(demo_user_doc)
+        logger.info(f"✅ Fresh demo user created: {DEMO_USER_EMAIL} with password: {DEMO_USER_PASSWORD}")
+        
+        # Verify demo user can authenticate
+        test_user = await get_user_by_email(DEMO_USER_EMAIL)
+        if test_user:
+            password_works = verify_password(DEMO_USER_PASSWORD, test_user["password_hash"])
+            logger.info(f"✅ Demo user password verification: {password_works}")
+        
     except Exception as e:
         logger.error(f"❌ Startup error: {str(e)}", exc_info=True)
 
@@ -223,9 +243,14 @@ async def health_check():
 # -------------------------
 @app.post("/api/auth/signup", response_model=AuthResponse)
 async def signup(user_data: UserCreate, response: Response):
+    logger.info(f"=== SIGNUP REQUEST START === Email: {user_data.email}")
     try:
-        logger.info(f"Signup request received for email: {user_data.email}")
+        # Validate input
+        if not user_data.email or not user_data.password:
+            logger.error("Signup failed: Missing email or password")
+            raise HTTPException(status_code=400, detail="Email and password are required")
         
+        logger.info(f"Checking if user already exists: {user_data.email}")
         # Check if user already exists
         existing_user = await get_user_by_email(user_data.email)
         if existing_user:
@@ -234,22 +259,33 @@ async def signup(user_data: UserCreate, response: Response):
         
         # Create new user
         logger.info(f"Creating new user: {user_data.email}")
-        user = await create_user(user_data.email, user_data.password, user_data.language)
+        try:
+            user = await create_user(user_data.email, user_data.password, user_data.language)
+            logger.info(f"User created in database: {user_data.email}")
+        except Exception as create_error:
+            logger.error(f"User creation error: {str(create_error)}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to create user account")
         
         # Create access token
-        access_token = create_access_token({"sub": user["id"]})
-        logger.info(f"User created successfully: {user_data.email}")
+        logger.info(f"Creating access token for: {user_data.email}")
+        try:
+            access_token = create_access_token({"sub": user["id"]})
+            logger.info("Access token created successfully")
+        except Exception as token_error:
+            logger.error(f"Token creation error: {str(token_error)}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to create authentication token")
         
         # Set httpOnly cookie
         response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
+            secure=False,
             samesite="lax",
-            max_age=604800  # 7 days
+            max_age=604800
         )
         
+        logger.info(f"=== SIGNUP REQUEST SUCCESS === Email: {user_data.email}")
         return AuthResponse(
             token=access_token,
             user=UserPublic(
@@ -259,10 +295,11 @@ async def signup(user_data: UserCreate, response: Response):
                 created_at=user["created_at"]
             )
         )
-    except HTTPException:
+    except HTTPException as http_exc:
+        logger.warning(f"=== SIGNUP REQUEST FAILED === Email: {user_data.email}, Status: {http_exc.status_code}, Detail: {http_exc.detail}")
         raise
     except Exception as e:
-        logger.error(f"Signup error for {user_data.email}: {str(e)}", exc_info=True)
+        logger.error(f"=== SIGNUP REQUEST ERROR === Email: {user_data.email}, Error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
 
@@ -314,7 +351,7 @@ async def login(credentials: UserLogin, response: Response):
         logger.info(f"Creating access token for: {credentials.email}")
         try:
             access_token = create_access_token({"sub": user["id"]})
-            logger.info(f"Access token created successfully")
+            logger.info("Access token created successfully")
         except Exception as token_error:
             logger.error(f"Token creation error: {str(token_error)}", exc_info=True)
             raise HTTPException(status_code=500, detail="Failed to create authentication token")
@@ -543,20 +580,3 @@ async def demo_login(response: Response):
     
     return {"token": demo_token}
 
-
-# -------------------------
-# STARTUP EVENT
-# -------------------------
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database indexes and demo user"""
-    # Create indexes
-    await users_collection.create_index("email", unique=True)
-    await symptom_checks_collection.create_index("user_id")
-    await login_attempts_collection.create_index("email")
-    
-    # Create demo user if not exists
-    demo_user = await get_user_by_email(DEMO_USER_EMAIL)
-    if not demo_user:
-        await create_user(DEMO_USER_EMAIL, DEMO_USER_PASSWORD, "en")
-        print(f"✅ Demo user created: {DEMO_USER_EMAIL}")
