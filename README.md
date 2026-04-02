@@ -1,33 +1,47 @@
-# ArogyaAI
+# Arogya AI
 
-ArogyaAI is a bilingual health web app that helps users:
+**Your trusted AI health assistant for instant symptom assessment**
 
-- create an account and sign in securely
-- chat with an AI symptom checker in English or Hindi
-- store symptom history and severity trends in a patient dashboard
-- discover nearby hospitals and clinics using current location
-- surface an emergency SOS path when severity is high
+Arogya AI is an intelligent healthcare application that provides:
 
-## Implemented Stack
+- 🤖 **AI-Powered Symptom Analysis** - Get instant medical guidance using advanced AI (Gemini 2.5 Flash)
+- 🎯 **Smart Risk Assessment** - Clear severity ratings (Low/Medium/High) with specific actions
+- 🏥 **Find Nearby Care** - Locate hospitals and clinics near you with distance and directions
+- 📊 **Health History** - Track your symptom assessments over time
+- 🌐 **Bilingual Support** - Available in English and Hindi
+- 🚨 **Emergency Guidance** - Immediate action recommendations for high-risk symptoms
 
-- Frontend: React + Tailwind CSS + React Router
-- Backend: FastAPI
-- Database: MongoDB
-- AI: Gemini through the Emergent universal LLM key
-- Maps: Google Maps embed links + nearby clinic lookup from current coordinates
+## Technology Stack
+
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
+- **Backend**: FastAPI (Python)
+- **Database**: MongoDB
+- **AI Engine**: Google Gemini 2.5 Flash (via Emergent LLM integration)
+- **Maps**: Google Maps + OpenStreetMap Overpass API
+- **Authentication**: JWT with httpOnly cookies
 
 ## Project Structure
 
 ```bash
 /app
-├── backend
-│   ├── server.py
-│   ├── ai_service.py
-│   ├── auth_utils.py
-│   ├── clinic_service.py
-│   ├── schemas.py
-│   ├── requirements.txt
-│   └── .env
+├── backend/
+│   ├── server.py              # FastAPI main application
+│   ├── ai_service.py          # Hybrid AI + rule-based symptom analysis
+│   ├── auth_utils.py          # JWT authentication
+│   ├── clinic_service.py      # Hospital/clinic finder
+│   ├── schemas.py             # Pydantic models
+│   ├── requirements.txt       # Python dependencies
+│   └── .env                   # Environment variables
+├── frontend/
+│   ├── src/
+│   │   ├── components/        # Reusable UI components
+│   │   ├── pages/             # Route pages
+│   │   ├── lib/               # Utilities and helpers
+│   │   └── context/           # React context providers
+│   ├── package.json
+│   └── .env                   # Frontend environment
+└── README.md
+```
 ├── frontend
 │   ├── src
 │   │   ├── components
@@ -38,6 +52,122 @@ ArogyaAI is a bilingual health web app that helps users:
 │   └── .env
 └── README.md
 ```
+
+## Key Features
+
+### 🤖 Intelligent Symptom Analysis
+- **Hybrid AI System**: Combines Google Gemini AI with rule-based safety protocols
+- **Smart Risk Classification**: Automatic detection of critical keywords (chest pain, bleeding, etc.)
+- **Pattern Detection**: Identifies concerning symptom combinations
+- **Medical Reasoning**: AI provides detailed diagnosis and recommendations
+- **Safety Override**: Rule-based severity always takes precedence for medical safety
+
+### 📊 Health Score Meter
+- Visual risk indicator (0-100 scale)
+- Animated progress bar
+- Color-coded by severity (Green/Amber/Red)
+- Clear messaging for each risk level
+
+### 👨‍⚕️ Doctor Recommendations
+- Intelligent specialist matching based on symptoms
+- Automatic suggestions (Cardiologist, Neurologist, Dermatologist, etc.)
+- Explains why specific specialist is recommended
+
+### 🗺️ Find Nearby Healthcare
+- Real-time location detection
+- OpenStreetMap Overpass API integration
+- Color-coded distance markers (< 2km = Green, 2-5km = Yellow, > 5km = Orange)
+- Nearest hospital highlighting
+- Estimated travel time
+- Direct "Get Directions" to Google Maps
+
+### 📜 Health History
+- Local storage of all symptom assessments
+- Searchable history with severity badges
+- Individual delete and clear all options
+- Confirmation dialogs for safety
+
+### 🎨 Premium UI/UX
+- Modern healthcare design system
+- Smooth animations and transitions
+- Loading states with professional indicators
+- Error boundaries prevent crashes
+- Mobile-responsive design
+- Bilingual support (English/Hindi)
+
+## Quick Start
+
+### Prerequisites
+- Node.js 18+ and yarn
+- Python 3.11+
+- MongoDB (local or remote)
+- Emergent LLM Key (for AI features)
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd arogya-ai
+```
+
+2. **Backend Setup**
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+3. **Frontend Setup**
+```bash
+cd frontend
+yarn install
+```
+
+4. **Environment Configuration**
+
+Create `/backend/.env`:
+```env
+MONGO_URL=mongodb://localhost:27017
+DB_NAME=test_database
+CORS_ORIGINS=*
+JWT_SECRET=your-super-secret-jwt-key-here
+ACCESS_TOKEN_EXPIRE_MINUTES=10080
+EMERGENT_LLM_KEY=sk-emergent-your-key-here
+DEMO_USER_EMAIL=demo@arogyaai.app
+DEMO_USER_PASSWORD=Arogya123!
+```
+
+Create `/frontend/.env`:
+```env
+REACT_APP_BACKEND_URL=
+WDS_SOCKET_PORT=443
+ENABLE_HEALTH_CHECK=false
+```
+
+5. **Start the Application**
+
+Terminal 1 (Backend):
+```bash
+cd backend
+uvicorn server:app --reload --host 0.0.0.0 --port 8001
+```
+
+Terminal 2 (Frontend):
+```bash
+cd frontend
+yarn dev
+```
+
+6. **Access the Application**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8001
+- API Docs: http://localhost:8001/docs
+
+### Demo Account
+- Email: `demo@arogyaai.app`
+- Password: `Arogya123!`
 
 ## VS Code Setup Guide
 
