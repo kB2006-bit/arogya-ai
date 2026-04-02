@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LoadingAnalysis } from "@/components/LoadingAnalysis";
+import { SymptomResultCard } from "@/components/SymptomResultCard";
 import { useAppContext } from "@/context/AppContext";
 import { api, withAuth } from "@/lib/api";
 import { translations } from "@/lib/translations";
@@ -31,6 +33,7 @@ export default function DashboardPage() {
   const [selectedClinicId, setSelectedClinicId] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [latestResult, setLatestResult] = useState(null);
   const [chatMessages, setChatMessages] = useState([
     {
       id: "dashboard-chat-welcome",
@@ -138,39 +141,55 @@ export default function DashboardPage() {
     };
 
     setChatMessages((current) => [...current, userMessage]);
+    const userInput = chatInput.trim();
     setChatInput("");
     setChatLoading(true);
+    setLatestResult(null);
 
     try {
-      const response = await api.post("/analyze-symptoms", { message: userMessage.text }, withAuth(token));
+      // Use full symptom checker for better results
+      const response = await api.post("/symptom-checker", { 
+        message: userInput,
+        language: language,
+        history: []
+      }, withAuth(token));
+      
+      // Store full result for enhanced display
+      setLatestResult({
+        ...response.data,
+        userMessage: userInput
+      });
+      
       const assistantMessage = {
         id: `dashboard-ai-${Date.now()}`,
         role: "assistant",
-        text: response.data.response,
+        text: response.data.summary,
         severity: response.data.severity,
-        emergency: response.data.emergency,
+        fullResult: response.data,
       };
       
       setChatMessages((current) => [...current, assistantMessage]);
       
       // Save to localStorage history
       saveSymptomCheck({
-        message: userMessage.text,
-        response: response.data.response,
+        message: userInput,
+        response: response.data.summary,
         severity: response.data.severity,
-        diagnosis: response.data.response,
-        summary: response.data.response
+        diagnosis: response.data.diagnosis,
+        summary: response.data.summary,
+        next_steps: response.data.next_steps
       });
       
       const historyResponse = await api.get("/history", withAuth(token));
       setHistoryItems(historyResponse.data);
     } catch (error) {
+      console.error("Symptom analysis error:", error);
       setChatMessages((current) => [
         ...current,
         {
           id: `dashboard-ai-error-${Date.now()}`,
           role: "assistant",
-          text: error.response?.data?.detail || "Unable to analyze symptoms right now.",
+          text: error.response?.data?.detail || "Unable to analyze symptoms right now. Please try again.",
           severity: null,
         },
       ]);
@@ -239,7 +258,22 @@ export default function DashboardPage() {
             </Button>
           </div>
         </section>
-        <Button asChild className="h-auto rounded-[1.5rem] border border-border bg-white px-6 py-6 text-left text-primary hover:bg-primary-light" data-testid="dashboard-find-clinics-button" variant="outline">
+      </section>
+
+      {/* Enhanced Result Display Section */}
+      {chatLoading && (
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <LoadingAnalysis message="Analyzing your symptoms with AI..." />
+        </section>
+      )}
+      
+      {latestResult && !chatLoading && (
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <SymptomResultCard result={latestResult} message={latestResult.userMessage} />
+        </section>
+      )}
+
+      <section className="grid gap-4 md:grid-cols-2"
           <Link to="/clinics" className="flex flex-col items-start gap-2">
             <span className="text-sm uppercase tracking-[0.2em] text-[#8E9B86]">Emergency-ready</span>
             <span className="font-heading text-2xl font-semibold text-slate-900">{t.dashboard.ctaClinics}</span>
