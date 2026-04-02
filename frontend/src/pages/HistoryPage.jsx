@@ -33,24 +33,34 @@ export default function HistoryPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   useEffect(() => {
+    console.log('📜 Loading history...');
     loadHistory();
   }, []);
 
   const loadHistory = () => {
     const data = getSymptomHistory();
+    console.log('📚 History loaded:', data.length, 'items');
     setHistory(data);
   };
 
   const handleClearHistory = () => {
+    console.log('🗑️ Clearing all history...');
     if (clearSymptomHistory()) {
+      console.log('✅ History cleared successfully');
       setHistory([]);
       setShowConfirmDialog(false);
+    } else {
+      console.error('❌ Failed to clear history');
     }
   };
 
   const handleDeleteItem = (id) => {
+    console.log('🗑️ Deleting item:', id);
     if (deleteSymptomCheck(id)) {
+      console.log('✅ Item deleted successfully');
       loadHistory();
+    } else {
+      console.error('❌ Failed to delete item');
     }
   };
 

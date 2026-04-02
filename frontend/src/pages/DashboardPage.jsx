@@ -9,7 +9,7 @@ import { SymptomResultCard } from "@/components/SymptomResultCard";
 import { useAppContext } from "@/context/AppContext";
 import { api, withAuth } from "@/lib/api";
 import { translations } from "@/lib/translations";
-import { saveSymptomCheck } from "@/lib/symptomHistory";
+import { saveSymptomCheck, getSymptomHistory } from "@/lib/symptomHistory";
 
 
 const severityTone = {
@@ -147,12 +147,18 @@ export default function DashboardPage() {
     setLatestResult(null);
 
     try {
+      console.log('🔍 Symptom Analysis Request:', userInput);
+      
       // Use full symptom checker for better results
       const response = await api.post("/symptom-checker", { 
         message: userInput,
         language: language,
         history: []
       }, withAuth(token));
+      
+      console.log('✅ Symptom Analysis Response:', response.data);
+      console.log('📊 Severity:', response.data.severity);
+      console.log('🏥 Diagnosis:', response.data.diagnosis);
       
       // Store full result for enhanced display
       setLatestResult({
@@ -170,8 +176,8 @@ export default function DashboardPage() {
       
       setChatMessages((current) => [...current, assistantMessage]);
       
-      // Save to localStorage history
-      saveSymptomCheck({
+      // Save to localStorage history with debugging
+      const savedEntry = saveSymptomCheck({
         message: userInput,
         response: response.data.summary,
         severity: response.data.severity,
@@ -180,10 +186,14 @@ export default function DashboardPage() {
         next_steps: response.data.next_steps
       });
       
+      console.log('💾 Saved to History:', savedEntry);
+      console.log('📜 Current History Count:', getSymptomHistory().length);
+      
       const historyResponse = await api.get("/history", withAuth(token));
       setHistoryItems(historyResponse.data);
     } catch (error) {
-      console.error("Symptom analysis error:", error);
+      console.error("❌ Symptom analysis error:", error);
+      console.error("Error details:", error.response?.data || error.message);
       setChatMessages((current) => [
         ...current,
         {

@@ -35,35 +35,53 @@ export default function ClinicsPage() {
   ], [language]);
 
   const loadClinics = useCallback(() => {
+    console.log('🗺️ Starting hospital search...');
     setLoading(true);
     setError("");
     setLoadingMessage(t.clinics.locating);
 
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
+        console.log('📍 Location obtained:', coords.latitude, coords.longitude);
+        
         const fallbackPayload = {
           clinics: buildFallbackCards(coords.latitude, coords.longitude),
           map_embed_url: buildMapUrl(coords.latitude, coords.longitude),
           emergency_number: "112",
         };
+        
+        console.log('🏥 Fallback hospitals ready:', fallbackPayload.clinics.length);
         setClinicData(fallbackPayload);
         setLoadingMessage(t.clinics.searching);
+        
         const slowTimer = window.setTimeout(() => {
           setLoadingMessage(t.clinics.slowMessage);
         }, 4500);
 
         try {
-          const response = await api.get(`/clinics/nearby?lat=${coords.latitude}&lng=${coords.longitude}`, withAuth(token));
+          const apiUrl = `/clinics/nearby?lat=${coords.latitude}&lng=${coords.longitude}`;
+          console.log('🔍 Calling API:', apiUrl);
+          
+          const response = await api.get(apiUrl, withAuth(token));
+          
+          console.log('✅ API Response:', response.data);
+          console.log('🏥 Hospitals found:', response.data.clinics.length);
+          
           setClinicData(response.data);
         } catch (requestError) {
+          console.error('❌ API Error:', requestError);
+          console.log('⚠️ Using fallback data');
+          
           setClinicData(fallbackPayload);
           setError(requestError.response?.data?.detail || t.clinics.slowMessage);
         } finally {
           window.clearTimeout(slowTimer);
           setLoading(false);
+          console.log('✅ Hospital search complete');
         }
       },
-      () => {
+      (error) => {
+        console.error('❌ Geolocation error:', error);
         setError(t.clinics.denied);
         setLoading(false);
       },
