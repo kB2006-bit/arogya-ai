@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { MapPinned, PhoneCall } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MapPinned, PhoneCall, Navigation, Award, Clock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
@@ -75,6 +75,25 @@ export default function ClinicsPage() {
     loadClinics();
   }, [loadClinics]);
 
+  // Helper function to get distance color
+  const getDistanceColor = (distance) => {
+    if (distance <= 2) return { bg: "bg-green-50", text: "text-green-700", border: "border-green-200", dot: "bg-green-500" };
+    if (distance <= 5) return { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200", dot: "bg-yellow-500" };
+    return { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", dot: "bg-orange-500" };
+  };
+
+  // Helper function to get estimated time
+  const getEstimatedTime = (distance) => {
+    // Assuming average speed of 30 km/h in city
+    const minutes = Math.round((distance / 30) * 60);
+    return minutes < 1 ? "< 1" : minutes;
+  };
+
+  // Sort clinics by distance (nearest first)
+  const sortedClinics = useMemo(() => {
+    return [...clinicData.clinics].sort((a, b) => a.distance_km - b.distance_km);
+  }, [clinicData.clinics]);
+
   return (
     <div className="grid gap-6" data-testid="clinics-page">
       <section className="rounded-[2rem] border border-border bg-white p-6 sm:p-8" data-testid="clinics-hero-section">
@@ -112,8 +131,49 @@ export default function ClinicsPage() {
         ) : null}
 
         {clinicData.map_embed_url ? (
-          <div className="mt-6 overflow-hidden rounded-[1.75rem] border border-border" data-testid="clinics-map-wrapper">
-            <iframe className="h-[360px] w-full border-0" data-testid="clinics-map-iframe" src={clinicData.map_embed_url} title={t.clinics.mapTitle} />
+          <div className="mt-6">
+            {/* Results Summary */}
+            {!loading && sortedClinics.length > 0 && sortedClinics[0].distance_km > 0 && (
+              <div className="mb-4 rounded-[1.5rem] border border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 p-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white">
+                      <MapPinned className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {language === "hi" 
+                          ? `${sortedClinics.length} अस्पताल मिले`
+                          : `${sortedClinics.length} hospitals found`}
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        {language === "hi"
+                          ? `निकटतम: ${sortedClinics[0].distance_km} km दूर`
+                          : `Nearest: ${sortedClinics[0].distance_km} km away`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-green-500"></span>
+                      <span className="text-slate-600">&lt; 2km</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-yellow-500"></span>
+                      <span className="text-slate-600">2-5km</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-orange-500"></span>
+                      <span className="text-slate-600">&gt; 5km</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="overflow-hidden rounded-[1.75rem] border border-border shadow-sm" data-testid="clinics-map-wrapper">
+              <iframe className="h-[360px] w-full border-0" data-testid="clinics-map-iframe" src={clinicData.map_embed_url} title={t.clinics.mapTitle} />
+            </div>
           </div>
         ) : null}
       </section>
@@ -123,24 +183,67 @@ export default function ClinicsPage() {
           <div className="rounded-[1.5rem] border border-border bg-white p-6 text-sm text-slate-600" data-testid="clinics-loading-state">{loadingMessage}</div>
         ) : null}
 
-        {!loading && !error && clinicData.clinics.length === 0 ? (
+        {!loading && !error && sortedClinics.length === 0 ? (
           <div className="rounded-[1.5rem] border border-dashed border-border bg-white p-6 text-sm text-slate-600" data-testid="clinics-empty-state">{t.clinics.empty}</div>
         ) : null}
 
-        {clinicData.clinics.map((clinic) => (
-          <article className="rounded-[1.5rem] border border-border bg-white p-6" data-testid={`clinic-card-${clinic.id}`} key={clinic.id}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-heading text-2xl font-semibold text-slate-900">{clinic.name}</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">{clinic.address}</p>
+        {sortedClinics.map((clinic, index) => {
+          const isNearest = index === 0 && clinic.distance_km > 0;
+          const colors = getDistanceColor(clinic.distance_km);
+          const estimatedTime = getEstimatedTime(clinic.distance_km);
+          
+          return (
+            <article 
+              className={`rounded-[1.5rem] border ${isNearest ? 'border-primary bg-gradient-to-br from-primary/5 to-white shadow-lg' : 'border-border bg-white'} p-6 transition-all hover:shadow-md`} 
+              data-testid={`clinic-card-${clinic.id}`} 
+              key={clinic.id}
+            >
+              {/* Recommended Badge */}
+              {isNearest && (
+                <div className="mb-4 flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white w-fit">
+                  <Award className="h-3.5 w-3.5" />
+                  <span>{language === "hi" ? "निकटतम अस्पताल" : "Nearest Hospital"}</span>
+                </div>
+              )}
+
+              {/* Hospital Name and Distance */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="font-heading text-xl font-semibold text-slate-900 leading-tight">{clinic.name}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{clinic.address}</p>
+                </div>
+                
+                {/* Distance Badge */}
+                <div className={`flex items-center gap-1.5 rounded-full ${colors.bg} ${colors.border} border px-3 py-1.5 shrink-0`}>
+                  <span className={`h-2 w-2 rounded-full ${colors.dot} animate-pulse`}></span>
+                  <span className={`text-sm font-bold ${colors.text}`}>{clinic.distance_km} km</span>
+                </div>
               </div>
-              <span className="rounded-full bg-primary-light px-3 py-1 text-sm font-semibold text-primary" data-testid={`clinic-distance-${clinic.id}`}>{clinic.distance_km} km</span>
-            </div>
-            <a className="mt-5 inline-flex items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white" data-testid={`clinic-directions-${clinic.id}`} href={clinic.maps_url} rel="noreferrer" target="_blank">
-              {t.clinics.directions}
-            </a>
-          </article>
-        ))}
+
+              {/* Estimated Time */}
+              <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
+                <Clock className="h-3.5 w-3.5" />
+                <span>
+                  {language === "hi" 
+                    ? `अनुमानित समय: ~${estimatedTime} मिनट`
+                    : `Estimated time: ~${estimatedTime} min`}
+                </span>
+              </div>
+
+              {/* Get Directions Button */}
+              <a 
+                className={`mt-5 flex items-center justify-center gap-2 rounded-full ${isNearest ? 'bg-primary' : 'bg-slate-900'} px-5 py-3 text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-lg`}
+                data-testid={`clinic-directions-${clinic.id}`} 
+                href={clinic.maps_url} 
+                rel="noreferrer" 
+                target="_blank"
+              >
+                <Navigation className="h-4 w-4" />
+                {language === "hi" ? "दिशा निर्देश प्राप्त करें" : "Get Directions"}
+              </a>
+            </article>
+          );
+        })}
       </section>
     </div>
   );
