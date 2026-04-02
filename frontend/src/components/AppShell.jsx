@@ -1,4 +1,4 @@
-import { HeartPulse, Languages, LogOut, MapPinned, MessageCircleHeart, ShieldPlus } from "lucide-react";
+import { HeartPulse, Languages, LogOut, MapPinned, MessageCircleHeart, ShieldPlus, History } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,10 @@ export const AppShell = () => {
                 {isAuthenticated ? (
                   <>
                     <NavLink className={navLinkClass} data-testid="nav-dashboard-link" end to="/dashboard">{t.navigation.dashboard}</NavLink>
-                    <NavLink className={navLinkClass} data-testid="nav-chat-link" to="/chat">{t.navigation.chat}</NavLink>
+                    <NavLink className={navLinkClass} data-testid="nav-history-link" end to="/history">
+                      <History className="h-4 w-4 inline mr-1" />
+                      {language === 'hi' ? 'इतिहास' : 'History'}
+                    </NavLink>
                     <NavLink className={navLinkClass} data-testid="nav-clinics-link" end to="/clinics">{t.navigation.clinics}</NavLink>
                   </>
                 ) : (

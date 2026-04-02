@@ -10,6 +10,7 @@ import { AppProvider, useAppContext } from "@/context/AppContext";
 import AuthPage from "@/pages/AuthPage";
 import ClinicsPage from "@/pages/ClinicsPage";
 import DashboardPage from "@/pages/DashboardPage";
+import HistoryPage from "@/pages/HistoryPage";
 import LandingPage from "@/pages/LandingPage";
 
 
@@ -27,6 +28,7 @@ const AppRoutes = () => {
           <Route element={<DashboardPage />} path="/dashboard" />
           <Route element={<Navigate replace to="/dashboard" />} path="/chat" />
           <Route element={<ClinicsPage />} path="/clinics" />
+          <Route element={<HistoryPage />} path="/history" />
         </Route>
       </Route>
     </Routes>

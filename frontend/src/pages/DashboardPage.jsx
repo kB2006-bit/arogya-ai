@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useAppContext } from "@/context/AppContext";
 import { api, withAuth } from "@/lib/api";
 import { translations } from "@/lib/translations";
+import { saveSymptomCheck } from "@/lib/symptomHistory";
 
 
 const severityTone = {
@@ -142,16 +143,25 @@ export default function DashboardPage() {
 
     try {
       const response = await api.post("/analyze-symptoms", { message: userMessage.text }, withAuth(token));
-      setChatMessages((current) => [
-        ...current,
-        {
-          id: `dashboard-ai-${Date.now()}`,
-          role: "assistant",
-          text: response.data.response,
-          severity: response.data.severity,
-          emergency: response.data.emergency,
-        },
-      ]);
+      const assistantMessage = {
+        id: `dashboard-ai-${Date.now()}`,
+        role: "assistant",
+        text: response.data.response,
+        severity: response.data.severity,
+        emergency: response.data.emergency,
+      };
+      
+      setChatMessages((current) => [...current, assistantMessage]);
+      
+      // Save to localStorage history
+      saveSymptomCheck({
+        message: userMessage.text,
+        response: response.data.response,
+        severity: response.data.severity,
+        diagnosis: response.data.response,
+        summary: response.data.response
+      });
+      
       const historyResponse = await api.get("/history", withAuth(token));
       setHistoryItems(historyResponse.data);
     } catch (error) {
