@@ -334,8 +334,11 @@ async def analyze_symptoms_brief(request: SymptomCheckRequest, access_token: Opt
 async def get_symptom_history(access_token: Optional[str] = Cookie(None)):
     user = await verify_auth_token(access_token)
     
-    # Fetch user's symptom checks
-    cursor = symptom_checks_collection.find({"user_id": user["id"]}).sort("created_at", -1)
+    # Fetch user's symptom checks with projection
+    cursor = symptom_checks_collection.find(
+        {"user_id": user["id"]},
+        {"_id": 0, "id": 1, "message": 1, "diagnosis": 1, "severity": 1, "summary": 1, "next_steps": 1, "warning_signs": 1, "emergency_message": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(100)
     checks = await cursor.to_list(length=100)
     
     # Format for response
@@ -360,8 +363,11 @@ async def get_symptom_history(access_token: Optional[str] = Cookie(None)):
 async def get_dashboard(access_token: Optional[str] = Cookie(None)):
     user = await verify_auth_token(access_token)
     
-    # Fetch user's symptom checks
-    cursor = symptom_checks_collection.find({"user_id": user["id"]}).sort("created_at", -1)
+    # Fetch user's symptom checks with projection
+    cursor = symptom_checks_collection.find(
+        {"user_id": user["id"]},
+        {"_id": 0, "id": 1, "message": 1, "diagnosis": 1, "severity": 1, "summary": 1, "next_steps": 1, "warning_signs": 1, "emergency_message": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(100)
     checks = await cursor.to_list(length=100)
     
     # Calculate summary stats

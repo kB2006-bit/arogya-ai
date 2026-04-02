@@ -30,10 +30,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const login = useCallback(async ({ email, password }) => {
-    const response = await api.post("/login", { email, password });
-    if (!response.data.success) {
-      throw { response: { data: { detail: response.data.message || "Invalid credentials" } } };
-    }
+    const response = await api.post("/auth/login", { email, password });
     persistAuth(response.data);
     return response.data;
   }, [persistAuth]);
