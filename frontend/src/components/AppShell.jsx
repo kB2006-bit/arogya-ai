@@ -28,12 +28,12 @@ export const AppShell = () => {
         <header className="sticky top-4 z-50 border border-border/80 bg-background/90 px-4 py-4 shadow-sm backdrop-blur-xl sm:px-6" data-testid="app-header">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white" data-testid="app-logo">
-                <HeartPulse className="h-6 w-6" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30" data-testid="app-logo">
+                <HeartPulse className="h-7 w-7 text-white" />
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#8E9B86]">{t.landing.eyebrow}</p>
-                <h1 className="font-heading text-2xl font-semibold text-slate-900">{t.appName}</h1>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600">{t.landing.eyebrow}</p>
+                <h1 className="font-heading text-2xl font-bold text-slate-900">{t.appName}</h1>
                 <p className="text-sm text-slate-600" data-testid="app-tagline">{t.tagline}</p>
               </div>
             </div>
