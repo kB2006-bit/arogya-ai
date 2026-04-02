@@ -9,10 +9,18 @@ const AppContext = createContext(null);
 export const AppProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem("arogya-token") || "");
   const [user, setUser] = useState(() => {
-    const rawUser = localStorage.getItem("arogya-user");
-    return rawUser ? JSON.parse(rawUser) : null;
+    try {
+      const rawUser = localStorage.getItem("arogya-user");
+      return rawUser ? JSON.parse(rawUser) : null;
+    } catch (error) {
+      console.error("Error parsing user from localStorage:", error);
+      return null;
+    }
   });
-  const [language, setLanguage] = useState(() => localStorage.getItem("arogya-language") || "en");
+  const [language, setLanguage] = useState(() => {
+    const storedLang = localStorage.getItem("arogya-language");
+    return storedLang === "en" || storedLang === "hi" ? storedLang : "en";
+  });
 
   const persistAuth = useCallback((payload) => {
     setToken(payload.token);
@@ -30,15 +38,25 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const login = useCallback(async ({ email, password }) => {
-    const response = await api.post("/auth/login", { email, password });
-    persistAuth(response.data);
-    return response.data;
+    try {
+      const response = await api.post("/auth/login", { email, password });
+      persistAuth(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
   }, [persistAuth]);
 
   const signup = useCallback(async ({ email, password }) => {
-    const response = await api.post("/auth/signup", { email, password, language });
-    persistAuth(response.data);
-    return response.data;
+    try {
+      const response = await api.post("/auth/signup", { email, password, language });
+      persistAuth(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Signup error:", error);
+      throw error;
+    }
   }, [language, persistAuth]);
 
   const logout = useCallback(() => {
@@ -65,6 +83,7 @@ export const AppProvider = ({ children }) => {
         setUser(response.data);
         localStorage.setItem("arogya-user", JSON.stringify(response.data));
       } catch (error) {
+        console.error("Session validation error:", error);
         clearAuth();
       }
     };

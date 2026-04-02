@@ -11,7 +11,7 @@ export default function AuthPage({ mode = "login" }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { language, login, signup } = useAppContext();
-  const t = translations[language];
+  const t = translations[language] || translations.en;
   const [form, setForm] = useState({ email: mode === "login" ? "demo@arogyaai.app" : "", password: mode === "login" ? "Arogya123!" : "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,8 @@ export default function AuthPage({ mode = "login" }) {
       }
       navigate(from, { replace: true });
     } catch (requestError) {
-      setError(requestError.response?.data?.detail || "Unable to continue right now.");
+      console.error("Auth error:", requestError);
+      setError(requestError.response?.data?.detail || requestError.message || "Unable to continue right now.");
     } finally {
       setLoading(false);
     }
