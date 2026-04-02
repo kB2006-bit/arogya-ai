@@ -1,5 +1,6 @@
 import os
 import uuid
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -25,10 +26,18 @@ from schemas import (
 
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="ArogyaAI", version="2.0")
 
 # CORS Configuration
 CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*").split(",")
+logger.info(f"CORS Origins configured: {CORS_ORIGINS}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS if CORS_ORIGINS != ["*"] else ["*"],
@@ -40,6 +49,7 @@ app.add_middleware(
 # MongoDB Connection
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "arogyaai_db")
+logger.info(f"MongoDB connecting to: {MONGO_URL}, Database: {DB_NAME}")
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
@@ -152,6 +162,29 @@ async def reset_login_attempts(email: str):
 
 
 # -------------------------
+# STARTUP EVENT
+# -------------------------
+@app.on_event("startup")
+async def startup_event():
+    try:
+        # Test MongoDB connection
+        await client.admin.command('ping')
+        logger.info("✅ MongoDB connection successful")
+        
+        # Ensure demo user exists
+        demo_user = await get_user_by_email(DEMO_USER_EMAIL)
+        if not demo_user:
+            logger.info(f"Creating demo user: {DEMO_USER_EMAIL}")
+            await create_user(DEMO_USER_EMAIL, DEMO_USER_PASSWORD, "en")
+            logger.info("✅ Demo user created successfully")
+        else:
+            logger.info(f"✅ Demo user already exists: {DEMO_USER_EMAIL}")
+            
+    except Exception as e:
+        logger.error(f"❌ Startup error: {str(e)}", exc_info=True)
+
+
+# -------------------------
 # ROOT ROUTE
 # -------------------------
 @app.get("/")
@@ -164,83 +197,106 @@ async def root():
 # -------------------------
 @app.post("/api/auth/signup", response_model=AuthResponse)
 async def signup(user_data: UserCreate, response: Response):
-    # Check if user already exists
-    existing_user = await get_user_by_email(user_data.email)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Create new user
-    user = await create_user(user_data.email, user_data.password, user_data.language)
-    
-    # Create access token
-    access_token = create_access_token({"sub": user["id"]})
-    
-    # Set httpOnly cookie
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
-        max_age=604800  # 7 days
-    )
-    
-    return AuthResponse(
-        token=access_token,
-        user=UserPublic(
-            id=user["id"],
-            email=user["email"],
-            language=user["language"],
-            created_at=user["created_at"]
+    try:
+        logger.info(f"Signup request received for email: {user_data.email}")
+        
+        # Check if user already exists
+        existing_user = await get_user_by_email(user_data.email)
+        if existing_user:
+            logger.warning(f"Signup failed: Email already registered - {user_data.email}")
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Create new user
+        logger.info(f"Creating new user: {user_data.email}")
+        user = await create_user(user_data.email, user_data.password, user_data.language)
+        
+        # Create access token
+        access_token = create_access_token({"sub": user["id"]})
+        logger.info(f"User created successfully: {user_data.email}")
+        
+        # Set httpOnly cookie
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",
+            max_age=604800  # 7 days
         )
-    )
+        
+        return AuthResponse(
+            token=access_token,
+            user=UserPublic(
+                id=user["id"],
+                email=user["email"],
+                language=user["language"],
+                created_at=user["created_at"]
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Signup error for {user_data.email}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
 
 
 @app.post("/api/auth/login", response_model=AuthResponse)
 async def login(credentials: UserLogin, response: Response):
-    # Check if user is locked out
-    if await check_login_lockout(credentials.email):
-        raise HTTPException(
-            status_code=429,
-            detail=f"Too many failed login attempts. Please try again in {LOCKOUT_DURATION_MINUTES} minutes."
+    try:
+        logger.info(f"Login request received for email: {credentials.email}")
+        
+        # Check if user is locked out
+        if await check_login_lockout(credentials.email):
+            logger.warning(f"Login failed: User locked out - {credentials.email}")
+            raise HTTPException(
+                status_code=429,
+                detail=f"Too many failed login attempts. Please try again in {LOCKOUT_DURATION_MINUTES} minutes."
+            )
+        
+        # Find user
+        user = await get_user_by_email(credentials.email)
+        if not user:
+            logger.warning(f"Login failed: User not found - {credentials.email}")
+            await record_failed_login(credentials.email)
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Verify password
+        if not verify_password(credentials.password, user["password_hash"]):
+            logger.warning(f"Login failed: Invalid password - {credentials.email}")
+            await record_failed_login(credentials.email)
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Reset login attempts on successful login
+        await reset_login_attempts(credentials.email)
+        
+        # Create access token
+        access_token = create_access_token({"sub": user["id"]})
+        logger.info(f"Login successful: {credentials.email}")
+        
+        # Set httpOnly cookie
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",
+            max_age=604800  # 7 days
         )
-    
-    # Find user
-    user = await get_user_by_email(credentials.email)
-    if not user:
-        await record_failed_login(credentials.email)
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
-    # Verify password
-    if not verify_password(credentials.password, user["password_hash"]):
-        await record_failed_login(credentials.email)
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
-    # Reset login attempts on successful login
-    await reset_login_attempts(credentials.email)
-    
-    # Create access token
-    access_token = create_access_token({"sub": user["id"]})
-    
-    # Set httpOnly cookie
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax",
-        max_age=604800  # 7 days
-    )
-    
-    return AuthResponse(
-        token=access_token,
-        user=UserPublic(
-            id=user["id"],
-            email=user["email"],
-            language=user["language"],
-            created_at=user["created_at"]
+        
+        return AuthResponse(
+            token=access_token,
+            user=UserPublic(
+                id=user["id"],
+                email=user["email"],
+                language=user["language"],
+                created_at=user["created_at"]
+            )
         )
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error for {credentials.email}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
 
 @app.get("/api/auth/me", response_model=UserPublic)
